@@ -1,0 +1,28 @@
+# Ambientes virtuais
+.venv/
+.venv-*/
+
+# Cache e artefatos Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Dados gerados em runtime
+cache/
+models/
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuracoes e segredos locais
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Metadados locais do Codex e do sistema
+.agents/
+.codex/
+.DS_Store
+Thumbs.db

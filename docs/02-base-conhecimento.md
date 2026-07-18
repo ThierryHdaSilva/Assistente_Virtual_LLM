@@ -1,279 +1,165 @@
 # Base de Conhecimento
- 
-*Arquitetura de dados do agente Alessandra — assistente financeira educacional focada no mercado brasileiro*
- 
-> [!IMPORTANT]
-> Nenhum dado do repositório original (fork) foi reaproveitado. A base de conhecimento foi projetada do zero, pois o modelo original pressupõe um agente de atendimento personalizado (com perfil de cliente e histórico de transações), incompatível com o propósito da Alessandra: um agente **educacional e informativo**, que por design não avalia perfil de risco nem dados financeiros pessoais do usuário.
- 
-> [!NOTE]
-> Este documento é o **detalhamento técnico** da base de conhecimento resumida no `README.md` (seções *Componentes* e *Fontes de Dados e Conhecimento*). Qualquer alteração em uma fonte de dado, script ou modelo deve ser refletida em ambos os arquivos.
- 
----
- 
-## Visão Geral da Arquitetura de Dados
- 
+
+Arquitetura de dados implementada na Alessandra.
+
+## Visão geral
+
+A base combina dois conjuntos versionados e fontes externas consultadas somente quando a pergunta exige:
+
+- um glossário financeiro local com 357 verbetes;
+- uma base histórica local com 193 eventos P0 parcialmente verificados;
+- cotações e listagem de ativos da B3 por `brapi.dev`;
+- notícias recentes por três feeds RSS.
+
+BCB, CVM e GDELT são extensões planejadas e não fazem parte da implementação atual.
+
 ```mermaid
 flowchart TD
-    subgraph ESTATICO["Dados Estáticos - versionados no Git"]
-        A1[glossario_financeiro.json]
-        A2[eventos_historicos.json]
-    end
- 
-    subgraph SCRIPTS["Scripts - versionados no Git"]
-        B1[build_index.py]
-        B2[fetch_cotacoes.py]
-        B3[fetch_noticias.py]
-    end
- 
-    subgraph RUNTIME["Dados Gerados em Runtime - NAO versionados"]
-        C1[(cotacoes_cache.db)]
-        C2[(historico_conversa.db)]
-        C3[(chroma_db / noticias_index)]
-    end
- 
-    subgraph EXTERNO["Fontes Externas - tempo real"]
-        D1[brapi.dev / BCB / CVM]
-        D2[RSS: InfoMoney, Valor, G1]
-        D3[GDELT Project]
-    end
- 
-    A1 --> B1
-    A2 --> B1
-    B1 --> C3
- 
-    D1 --> B2 --> C1
-    D2 --> B3
-    D3 --> B3
-    B3 --> FB[FinBERT-PT-BR - Classificador de Sentimento]
-    FB --> C3
- 
-    C1 --> ORQ[Orquestrador]
-    C2 --> ORQ
-    C3 --> ORQ
-    ORQ --> LLM[LLM Local - Qwen2.5]
+    G[data/glossario_financeiro.json] --> I[scripts/build_index.py]
+    E[data/base_historica/outputs] --> I
+    I --> R[(cache/chroma_db: base_conhecimento_v2)]
+
+    B[brapi.dev] --> Q[scripts/fetch_cotacoes.py]
+    Q --> C[(cache/cotacoes_cache.db)]
+
+    N[RSS: InfoMoney, Valor e G1] --> FN[scripts/fetch_noticias.py]
+    FN --> S[FinBERT-PT-BR]
+
+    R --> O[src/agente.py]
+    C --> O
+    S --> O
+    O --> L[LLM local via Ollama]
 ```
- 
-**Legenda rápida:**
-- 🟢 **Estático (versionado):** arquivos que você escreve/cura manualmente — vão pro GitHub.
-- 🔵 **Scripts (versionados):** código que gera os dados dinâmicos — vão pro GitHub.
-- 🔴 **Runtime (não versionado):** bancos/índices criados automaticamente ao rodar o app — ficam no `.gitignore`.
-- 🟡 **Externo:** fontes vivas, consultadas sob demanda, nunca armazenadas como "verdade permanente".
----
- 
-## Dados Utilizados
- 
-| Arquivo / Fonte | Formato | Origem | Utilização no Agente |
-|---|---|---|---|
-| `glossario_financeiro.json` | JSON | Autoral — curado manualmente por você | Explicar tipos de investimento e termos financeiros com analogias no estilo Alessandra |
-| `eventos_historicos.json` | JSON | Autoral — pesquisado e documentado manualmente | Contextualizar como eventos (clima/geopolítica/economia) impactaram o mercado no passado |
-| `cotacoes_cache.db` | SQLite | Gerado em runtime, a partir de APIs externas | Evitar chamadas repetidas às APIs de cotação na mesma janela de tempo |
-| `noticias_index` (coleção ChromaDB) | Vetores/embeddings | Gerado em runtime, a partir dos JSONs estáticos + notícias buscadas | Recuperação por similaridade (RAG) para responder com contexto relevante |
-| `historico_conversa.db` | SQLite | Gerado em runtime, por sessão de usuário | Dar continuidade à conversa — **nunca** usado para personalizar recomendação |
-| `lucas-leme/FinBERT-PT-BR` (ou `turing-usp/FinBertPTBR`) | Modelo (não dataset) | Público — Hugging Face | Classifica notícias coletadas via RSS/GDELT em POSITIVE/NEGATIVE/NEUTRAL antes de indexá-las no RAG — evita depender de classificador treinado em inglês sobre texto traduzido |
-| Datasets do Hugging Face (`finance-alpaca`, `Sujet-Finance-Instruct-177k`, `takala/financial_phrasebank`, `zeroshot/twitter-financial-news-sentiment`) | JSON/CSV | Público — Hugging Face | Usados apenas como referência de estrutura na curadoria do glossário e do classificador; conteúdo final é reescrito em português, nunca exposto ao usuário diretamente |
-| `lucasalmda/pt-br-financial-news-sentiment` | CSV/JSON | Público — Hugging Face | Candidato a dataset bruto de notícia PT-BR para enriquecer o índice de notícias — **atenção:** erro de parsing de timestamp identificado no viewer padrão do HF; testar com cautela antes de depender dele |
- 
-> [!TIP]
-> **Datasets públicos do Hugging Face:** foram avaliados e confirmados como existentes `gbharti/finance-alpaca`, `sujet-ai/Sujet-Finance-Instruct-177k`, `takala/financial_phrasebank` e `zeroshot/twitter-financial-news-sentiment`. Todos em inglês — usados apenas como referência estrutural, nunca traduzidos em massa (ver seção *Adaptações nos Dados*). Dois outros datasets cogitados inicialmente (`ZhengXiang/ESG_Finance_News` e `eduagarcia/CVM_informacoes_financeiras`) foram **descartados por não existirem** — substituídos pelo Portal de Dados Abertos da CVM (`dados.cvm.gov.br`), fonte oficial real.
- 
----
- 
-## Origem Detalhada de Cada Componente
- 
-### 1. `glossario_financeiro.json` — autoral
- 
-Escrito por você, com apoio opcional de LLM para gerar rascunhos, sempre revisado antes de entrar no repositório. Estrutura de referência inspirada no formato pergunta→resposta do `finance-alpaca`, mas conteúdo 100% em português e no tom da Alessandra.
- 
-```json
-[
-  {
-    "termo": "Renda Fixa",
-    "definicao_simples": "Investimento em que você empresta dinheiro e sabe, desde o início, como o rendimento será calculado.",
-    "analogia": "Sabe quando você empresta dinheiro pro seu cunhado e ele promete devolver com um jurinho no final do mês? A renda fixa é parecida, só que no lugar do cunhado, você empresta para um banco ou para o governo.",
-    "tipo": "educativo_gerado"
-  }
-]
-```
- 
-### 2. `eventos_historicos.json` — autoral, pesquisado
- 
-Casos reais e documentados (ex: safra e clima, variação cambial, crises setoriais) pesquisados em fontes confiáveis e resumidos por você em formato estruturado. Não é gerado automaticamente — é trabalho de curadoria.
- 
-```json
-[
-  {
-    "evento": "Seca no Sul do Brasil - 2021",
-    "resumo": "Estiagem afetou a safra de soja e milho, pressionando exportações do agronegócio.",
-    "impacto_mercado": "Ações de empresas do setor agro e de logística de commodities recuaram no curto prazo.",
-    "fonte": "descrição da fonte usada na pesquisa",
-    "tipo": "fato_documentado"
-  }
-]
-```
- 
-### 3. `cotacoes_cache.db` — gerado em runtime
- 
-Não existe até o app rodar. Criado por `fetch_cotacoes.py` na primeira consulta a brapi.dev/BCB/CVM, com timestamp para controle de expiração do cache.
- 
-### 4. `noticias_index` (ChromaDB) — gerado em runtime
- 
-Criado ao rodar `build_index.py`, que transforma o glossário, os eventos históricos e as notícias coletadas em embeddings (via `all-MiniLM-L6-v2`) para permitir busca por similaridade.
- 
-### 5. `historico_conversa.db` — gerado em runtime
- 
-Criado automaticamente pelo SQLite na primeira mensagem de cada sessão de chat. Guarda apenas o histórico do diálogo atual — nunca perfil ou dado financeiro pessoal do usuário.
- 
-### 6. "Histórico de notícias" (RSS + GDELT) — busca ao vivo, sem arquivo fixo
- 
-Não é um dataset salvo permanentemente. `fetch_noticias.py` consulta RSS (InfoMoney, Valor Econômico, G1 Economia) e GDELT em tempo real, a cada necessidade — o que fica salvo é só o cache temporário de curto prazo, não um repositório histórico de notícias.
- 
-### 7. `FinBERT-PT-BR` — modelo público, nativo em português
- 
-Não é um dado, é um **modelo classificador** (`lucas-leme/FinBERT-PT-BR`, alternativa `turing-usp/FinBertPTBR`), baixado do Hugging Face e rodado localmente via `transformers`. Toda notícia coletada por `fetch_noticias.py` passa por ele antes de ser indexada no ChromaDB, recebendo um rótulo de sentimento (POSITIVE/NEGATIVE/NEUTRAL) que entra como metadado no `noticias_index`.
- 
-```python
-from transformers import AutoTokenizer, BertForSequenceClassification, pipeline
- 
-tokenizer = AutoTokenizer.from_pretrained("lucas-leme/FinBERT-PT-BR")
-model = BertForSequenceClassification.from_pretrained("lucas-leme/FinBERT-PT-BR")
-classifier = pipeline(task='text-classification', model=model, tokenizer=tokenizer)
-```
- 
-> **Status:** existência e uso confirmados via documentação oficial do Hugging Face — download e execução ainda não testados em ambiente real. Validar na máquina de desenvolvimento antes de integrar em produção (ver `README.md`, seção *Fontes de Dados e Conhecimento*).
- 
----
- 
-## Adaptações nos Dados
- 
-Não houve "adaptação" dos dados mockados do repositório original — houve **substituição total**. Motivos:
- 
-1. **Incompatibilidade de propósito:** o template original pressupõe um agente que conhece o cliente (`perfil_investidor.json`), analisa transações (`transacoes.csv`) e sugere produtos por perfil. A Alessandra, por regra declarada de anti-alucinação e anti-recomendação, não avalia perfil de risco nem dado financeiro pessoal — usar essa base contradiria a limitação já documentada do agente.
-2. **Redução de superfície de risco:** ao não armazenar nem simular dados sensíveis (saldo, transações, perfil de investidor), o agente elimina uma categoria inteira de risco de privacidade, mesmo em ambiente de teste/mock.
-3. **Dados reais no lugar de mockados:** cotações e notícias vêm de fontes reais (APIs públicas), e o conteúdo educacional é curado manualmente — priorizando precisão sobre volume, mesmo que isso signifique uma base menor no início.
-| Arquivo original (fork) | Destino |
-|---|---|
-| `historico_atendimento.csv` | Substituído por `historico_conversa.db` (gerado em runtime, sem análise de perfil) |
-| `perfil_investidor.json` | ❌ Descartado — contradiz a limitação declarada do agente |
-| `produtos_financeiros.json` | Substituído por `glossario_financeiro.json` (explica o produto, não "sugere o ideal para você") |
-| `transacoes.csv` | ❌ Descartado — fora do escopo do agente |
- 
----
- 
-## Estratégia de Integração
- 
-### Como os dados são carregados?
- 
-```mermaid
-sequenceDiagram
-    participant U as Usuário
-    participant O as Orquestrador
-    participant C as Cache (SQLite)
-    participant R as RAG (ChromaDB)
-    participant API as APIs Externas
-    participant FB as FinBERT-PT-BR
-    participant L as LLM Local
- 
-    U->>O: Envia pergunta
-    O->>O: Classifica tipo de pergunta
-    alt Pergunta educativa (conceito)
-        O->>R: Busca por similaridade no índice
-        R-->>O: Retorna trecho relevante
-    else Pergunta sobre cotação/dado real
-        O->>C: Verifica cache válido?
-        alt Cache expirado ou inexistente
-            O->>API: Consulta brapi.dev / BCB / CVM
-            API-->>O: Retorna dado atual
-            O->>C: Atualiza cache
-        else Cache válido
-            C-->>O: Retorna dado em cache
-        end
-    else Pergunta sobre notícia/evento
-        O->>API: Consulta RSS / GDELT
-        API-->>O: Retorna notícias recentes
-        O->>FB: Classifica sentimento (FinBERT-PT-BR)
-        FB-->>O: POSITIVE / NEGATIVE / NEUTRAL
-        O->>R: Busca eventos históricos similares
-        R-->>O: Retorna contexto histórico
-    end
-    O->>L: Monta prompt (camada fixa + camada dinâmica)
-    L-->>O: Gera resposta
-    O->>O: Valida saída (filtro anti-recomendação)
-    O-->>U: Responde
-```
- 
-Dois ritmos de carregamento distintos:
- 
-- **Dados estáticos** (`glossario_financeiro.json`, `eventos_historicos.json`, datasets HF de referência): processados **uma única vez**, em etapa offline de indexação (`build_index.py`), gerando o índice vetorial no ChromaDB. Não são recarregados a cada sessão.
-- **Dados dinâmicos** (cotação, notícia do dia): buscados **sob demanda**, apenas quando a pergunta do usuário exige, com cache em SQLite para evitar chamadas repetidas à mesma fonte na mesma janela de tempo.
-### Como os dados são usados no prompt?
- 
-Não vão "todos" no system prompt — isso estouraria o contexto rapidamente em um modelo local menor. O prompt final é montado em duas camadas:
- 
-| Camada | Conteúdo | Frequência |
+
+## Dados versionados
+
+| Caminho | Conteúdo | Uso |
 |---|---|---|
-| **Fixa (system prompt)** | Persona da Alessandra, regras de conduta, tom, limitações declaradas | Sempre presente, pequena, não muda por pergunta |
-| **Dinâmica (por turno)** | Resultado da consulta de API (cotação/notícia) + trecho recuperado do RAG relevante à pergunta específica | Injetada a cada nova pergunta, varia conforme o conteúdo |
- 
-Cada trecho injetado carrega um metadado de confiança (`tipo: "fato_documentado"` ou `tipo: "educativo_gerado"`), permitindo que o filtro de validação saiba diferenciar dado verificado de conteúdo didático gerado.
- 
----
- 
-## Exemplo de Contexto Montado
- 
+| `data/glossario_financeiro.json` | 357 verbetes em português | Explicações educativas e conceituais |
+| `data/base_historica/outputs` | Lotes P0, overlay de reparo, fontes e manifestos | Contexto histórico auditável |
+| `data/system_prompt.txt` | Persona, limites e regras da Alessandra | Camada fixa de toda chamada ao LLM |
+
+### Glossário
+
+O indexador lê a lista `verbetes`, valida a presença do termo e transforma campos relevantes em um documento textual. Cada item recebe metadados como:
+
+```json
+{
+  "tipo": "glossario",
+  "categoria": "glossario",
+  "termo": "Nome do termo",
+  "capitulo": "Nome do capitulo"
+}
 ```
-[SYSTEM PROMPT — camada fixa]
-Você é a Alessandra, assistente financeira educacional focada no mercado brasileiro.
-Regras: nunca recomende compra/venda; sempre cite a fonte e a data/hora do dado;
-se não souber, admita e redirecione dentro do escopo; use analogias simples.
- 
-[CONTEXTO DINÂMICO — injetado nesta pergunta]
-Pergunta do usuário: "Por que a ação da Vale caiu hoje?"
- 
-Dado de mercado (fonte: brapi.dev, consultado às 14:32):
-- VALE3: R$ 61,20 (-3,8% no dia)
- 
-Notícia relevante (fonte: G1 Economia, hoje):
-- Queda no preço do minério de ferro após dados fracos da manufatura chinesa
-- Sentimento classificado: NEGATIVE (FinBERT-PT-BR)
- 
-Contexto histórico (RAG — eventos_historicos.json, tipo: fato_documentado):
-- "Em quedas similares de demanda chinesa por minério (2015, 2021),
-   mineradoras brasileiras recuaram entre 3% e 8% no curto prazo."
- 
-[Instrução final]: Responda usando apenas os dados acima, no tom da Alessandra,
-sem recomendar compra ou venda.
-```
- 
----
- 
-## Estrutura de Repositório Sugerida
- 
-```
-projeto-alessandra/
+
+### Eventos históricos P0
+
+A base histórica não é um único `eventos_historicos.json`. Ela é composta por arquivos JSONL em `data/base_historica/outputs/database`, acompanhados por fontes e manifestos em `data/base_historica/outputs/indexes`.
+
+Antes de indexar, `scripts/build_index.py`:
+
+1. localiza `p0_canonical_frozen_manifest.json`;
+2. exige certificação e autorização de uso downstream;
+3. confere hashes dos 64 lotes de eventos e fontes;
+4. valida o overlay de reparo do evento cambial brasileiro de 1999;
+5. reconstrói a ordem canônica de 193 IDs;
+6. associa os claims às fontes existentes;
+7. gera um documento por evento.
+
+O congelamento e a integridade da cadeia são certificados, mas os registros têm cobertura factual parcial. Por isso, a descrição correta é **193 eventos parcialmente verificados**.
+
+## Índice vetorial
+
+| Propriedade | Valor atual |
+|---|---|
+| Banco vetorial | ChromaDB persistente |
+| Diretório | `cache/chroma_db` |
+| Coleção | `base_conhecimento_v2` |
+| Modelo de embeddings | `all-MiniLM-L6-v2` |
+| Verbetes | 357 |
+| Eventos P0 | 193 |
+| Total | 550 documentos |
+
+O comando de indexação recria apenas a coleção derivada. Os arquivos em `data/` não são alterados.
+
+Por padrão, o indexador usa `data/base_historica`. A variável `HISTORICAL_EVENTS_DIR` permanece disponível apenas para apontar uma cópia alternativa compatível.
+
+## Dados gerados em runtime
+
+| Caminho | Criação | Conteúdo |
+|---|---|---|
+| `cache/chroma_db` | `scripts/build_index.py` | Índice vetorial derivado |
+| `cache/index_manifest.json` | `scripts/build_index.py` | Resumo da indexação |
+| `cache/cotacoes_cache.db` | `scripts/fetch_cotacoes.py` | Cotações com validade de 10 minutos |
+| `cache/historico_conversa.db` | `src/app.py` | Mensagens registradas por sessão |
+
+A pasta `cache/` é criada automaticamente. Ela e os arquivos SQLite permanecem fora do Git.
+
+## Dados externos atuais
+
+### Cotações e empresas
+
+`scripts/fetch_cotacoes.py` consulta:
+
+- `https://brapi.dev/api/quote/{ticker}` para cotações;
+- `https://brapi.dev/api/quote/list` para uma lista parcial de empresas.
+
+A camada valida status HTTP, JSON, estrutura da resposta e campos numéricos obrigatórios. Falhas de rede, timeout, HTTP ou resposta inválida resultam em fallback, sem inventar valores.
+
+### Notícias
+
+`scripts/fetch_noticias.py` consulta sob demanda:
+
+- InfoMoney;
+- Valor Econômico;
+- G1 Economia.
+
+As notícias não são gravadas no ChromaDB e não possuem cache SQLite. Cada feed é isolado: uma fonte indisponível não impede o uso das demais. Cada item válido carrega fonte, título, resumo, link e data publicada pelo feed.
+
+Em `src/agente.py`, até cinco títulos recebem classificação de sentimento pelo `FinBERT-PT-BR` e entram diretamente no contexto do turno. O rótulo é informativo e não representa recomendação ou previsão.
+
+## Recuperação e montagem de contexto
+
+Perguntas educativas ou históricas recuperam até quatro documentos da coleção. O contexto enviado ao LLM identifica se cada trecho veio do glossário ou da base histórica.
+
+Perguntas de cotação recebem preço, variação, fonte, horário e link de conferência. Perguntas de notícias recebem veículo, título, data, link e sentimento.
+
+Os 550 documentos não são enviados de uma vez. Somente os resultados pertinentes ao turno entram no prompt, reduzindo consumo de contexto.
+
+## Persistência da conversa
+
+`src/app.py` registra cada mensagem em `historico_conversa.db`. A interface usa `st.session_state` para exibir o histórico da sessão aberta. O banco não é consultado pelo agente e não é usado como memória entre sessões nem para criar perfil do usuário.
+
+## Fontes planejadas
+
+| Fonte | Situação |
+|---|---|
+| Banco Central do Brasil (BCB/SGS) | Planejada; sem integração no código atual |
+| Portal de Dados Abertos da CVM | Planejada; sem integração no código atual |
+| GDELT | Planejada; sem integração no código atual |
+
+Nenhum exemplo ou resposta deve afirmar que essas fontes foram consultadas até que suas integrações sejam implementadas.
+
+## Estrutura relevante
+
+```text
+Assistente_Virtual_LLM/
 ├── data/
-│   ├── glossario_financeiro.json      # versionado — autoral
-│   └── eventos_historicos.json        # versionado — autoral
+│   ├── base_historica/
+│   │   └── outputs/
+│   ├── glossario_financeiro.json
+│   └── system_prompt.txt
 ├── scripts/
-│   ├── build_index.py                 # versionado — gera o ChromaDB local
-│   ├── fetch_cotacoes.py              # versionado — consulta brapi.dev/BCB/CVM
-│   ├── fetch_noticias.py              # versionado — consulta RSS/GDELT
-│   └── classify_sentiment.py          # versionado — chama o FinBERT-PT-BR
-├── cache/                             # NÃO versionado (.gitignore)
-│   ├── cotacoes_cache.db
-│   ├── historico_conversa.db
-│   └── chroma_db/
-├── models/                            # NÃO versionado (.gitignore)
-│   └── finbert-pt-br/                 # baixado do Hugging Face na 1ª execução
-└── .gitignore
+│   ├── build_index.py
+│   ├── fetch_cotacoes.py
+│   ├── fetch_noticias.py
+│   └── classify_sentiment.py
+├── src/
+│   ├── agente.py
+│   ├── app.py
+│   └── config.py
+├── cache/                  # criado automaticamente e ignorado pelo Git
+├── requirements.txt
+└── README.md
 ```
- 
-```gitignore
-cache/
-*.db
-chroma_db/
-models/
-__pycache__/
-```
- 
-> [!NOTE]
-> Essa estrutura garante que qualquer pessoa que clone o repositório encontre apenas o **conteúdo autoral** (`data/`) e o **código que gera o restante** (`scripts/`) — nenhum dado sensível, pesado ou binário fica versionado no Git.
+

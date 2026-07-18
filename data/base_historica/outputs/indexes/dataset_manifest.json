@@ -1,0 +1,26 @@
+{
+  "profile": "estendida-500",
+  "generated_at": "2026-07-14T00:00:00-03:00",
+  "cutoff_at": "2026-07-13T23:59:59-03:00",
+  "catalog_records": 500,
+  "priority_counts": {
+    "P1": 307,
+    "P0": 193
+  },
+  "partially_verified_records": 3,
+  "pending_research_records": 497,
+  "event_ids_unique": true,
+  "event_schema_exact": true,
+  "episode_records": 1,
+  "relation_records": 1,
+  "observation_records": 0,
+  "status": "O inventário estendido está sintaticamente válido, mas não atende aos testes de aceitação de pesquisa completa: 497 eventos ainda exigem evidência factual específica.",
+  "files": {
+    "events_1900_1999.jsonl": 35,
+    "events_undated.jsonl": 42,
+    "events_2000_2009.jsonl": 73,
+    "events_2010_2019.jsonl": 131,
+    "events_2020_2023.jsonl": 135,
+    "events_2024_2026-07-13.jsonl": 84
+  }
+}

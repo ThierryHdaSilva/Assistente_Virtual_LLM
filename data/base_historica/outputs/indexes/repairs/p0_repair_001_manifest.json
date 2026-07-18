@@ -1,0 +1,80 @@
+{
+  "repair_id": "P0-REPAIR-001",
+  "operation": "overlay_upsert",
+  "repair_scope": "Inserção canônica não destrutiva fora da numeração dos lotes P0.",
+  "base_manifest": "outputs/indexes/dataset_manifest.json",
+  "base_manifest_unchanged": true,
+  "cutoff_at": "2026-07-13T23:59:59-03:00",
+  "event_ids": [
+    "EVT-1999-BRA-crise-cambial-brasileira-e-adocao-do-cambio-flutuante-1999"
+  ],
+  "canonical_event_name_pt": "Crise cambial brasileira e adoção do câmbio flutuante (1999)",
+  "event_count": 1,
+  "claim_count": 1,
+  "new_source_count": 0,
+  "reused_source_ids": [
+    "SRC-BCB-1999-01-COMUNICADO-6565"
+  ],
+  "canonical_sequence": {
+    "catalog_position_one_based": 14,
+    "catalog_position_zero_based": 13,
+    "insert_after_event_id": "EVT-1998-GLOBAL-default-russo-e-colapso-do-ltcm-1998",
+    "insert_after_canonical_name_pt": "Default russo e colapso do LTCM (1998)",
+    "insert_before_event_id": "EVT-2004-GLOBAL-terremoto-e-tsunami-do-oceano-indico-2004",
+    "insert_before_canonical_name_pt": "Terremoto e tsunami do Oceano Índico (2004)",
+    "affected_numbered_batch_id": "P0-005",
+    "intended_position_within_affected_batch": 2,
+    "materialization_rule": "Na sequência lógica dos event_ids dos lotes P0-001 a P0-064, inserir o event_id deste reparo imediatamente depois da âncora anterior e imediatamente antes da âncora posterior. Não renumerar lotes e não substituir arquivos históricos."
+  },
+  "physical_name_mapping": {
+    "canonical_batch_identifier": "P0-005",
+    "numbered_event_file": "outputs/database/events/batches/p0_batch_005.jsonl",
+    "numbered_source_file": "outputs/database/sources/batches/sources_p0_batch_005.jsonl",
+    "numbered_manifest_file": "outputs/indexes/batches/p0_batch_005_manifest.json",
+    "canonical_base_event_file": "outputs/database/events/events_1900_1999.jsonl",
+    "canonical_base_source_file": "outputs/database/sources/sources.jsonl",
+    "repair_event_file": "outputs/database/events/repairs/p0_repair_001.jsonl",
+    "repair_manifest_file": "outputs/indexes/repairs/p0_repair_001_manifest.json",
+    "new_source_file": null,
+    "mapping_note": "Os nomes físicos seguem a convenção existente do repositório. Este mapeamento funciona como alias documental e não autoriza renomeação ou reescrita."
+  },
+  "mandatory_context_files": {
+    "AGENTS.md": "61993e36d5a845cf4cf988e0a0c33ae1adf173ae8f250d3488f2010ce34ccb17",
+    "project-context.md": "3042ba92eafeb4d463a299b6a55777c84b85b64078d922d2dc077062add65415",
+    "memory.md": "0f808c2fcc0a6fefd96200e83f5d856f634a568e1e2f7f689d0b02e0dfb58bcb",
+    "README.md": "bae53bbd5aee4ff0cc3cc27cf20d922e056a6b5abde72e75bed7d7619a958ab2"
+  },
+  "protected_file_sha256_before_repair": {
+    "database/events/batches/p0_batch_005.jsonl": "ab45e35d091dbf852c221532973ce08d71ad5a0e4f9011c05484bf3426ca9086",
+    "database/sources/batches/sources_p0_batch_005.jsonl": "92d301c6a1c3d1fd0fa44ddf6cd6bc46eaaae872fcbf33b763c03bad053fc197",
+    "indexes/batches/p0_batch_005_manifest.json": "188c15510f2380b88e1e1a926a84e6f0593afad531fe683d34f6fc49cf9f0467",
+    "database/events/events_1900_1999.jsonl": "a37452b7d0f0bcbbb1c82285ab9a499da9bd5b13f6caf278a03b12a5c7f5e6d4",
+    "database/sources/sources.jsonl": "751d271acd359353ef4128a13253aa3e578cb4585dd1e703088fe699135c25a1",
+    "indexes/chronology.json": "63ae193e69b4b8c3eed64786b9b1308494610b594d6babd901ee55a22638fef1",
+    "indexes/taxonomy.json": "83b750690afa80de0b06f0d1c1f8b200736d7149c9a59b159f1b51c61a81a75b"
+  },
+  "preexisting_outputs_snapshot": {
+    "file_count": 215,
+    "root_sha256": "ce49994108e34a679e51e5d807ea47a8dda2d0368c2839891c1fc645808c1585",
+    "event_batches_root_sha256": "35ad91b69211cfeaffa2857f460b9b20dd346f25b0ae01a04aad207a78f1adf2",
+    "source_batches_root_sha256": "431b4d4430ae147f915a2b96055691985ffb00ca46209e443507be1eb434bbe5",
+    "manifest_batches_root_sha256": "6c244b6f945fbe270e5ac44ed2a1526a01847b7673a45f45e2eb277d115d9ba2",
+    "hash_root_method": "SHA-256 das linhas UTF-8 ordenadas no formato caminho_relativo, tabulação, sha256_do_arquivo e quebra de linha."
+  },
+  "validation": {
+    "json_jsonl_syntax_valid": true,
+    "repair_is_outside_numbered_p0_batches": true,
+    "repair_event_semantically_equals_base_record": true,
+    "canonical_event_id_and_name_preserved": true,
+    "anchor_order_unambiguous": true,
+    "reconstructed_catalog_event_count": 193,
+    "reconstructed_catalog_order_exact": true,
+    "event_ids_unique_and_deterministic": true,
+    "source_claim_references_valid": true,
+    "cutoff_consistent": true,
+    "historical_files_unchanged": true,
+    "new_source_record_required": false
+  },
+  "next_pending_p0_after_repair": null,
+  "notes": "Este reparo cobre exclusivamente o evento P0 ausente na cadeia de overlays. A fonte e o registro canônico já existiam nas partições-base; nenhum arquivo P0-001 a P0-064 foi alterado e nenhum lote P0-065 foi criado."
+}

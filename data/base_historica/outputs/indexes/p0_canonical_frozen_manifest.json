@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "freeze_id": "P0-FREEZE-001",
+  "artifact_type": "Manifesto congelado da reconstrução canônica P0.",
+  "certification_status": "certificado",
+  "cutoff_at": "2026-07-13T23:59:59-03:00",
+  "numbered_chain": {
+    "first_batch_id": "P0-001",
+    "last_batch_id": "P0-064",
+    "batch_count": 64,
+    "numbered_event_count": 192,
+    "preserved_without_changes": true,
+    "new_numbered_batch_created": false
+  },
+  "repair_overlay": {
+    "repair_id": "P0-REPAIR-001",
+    "outside_numbered_chain": true,
+    "event_id": "EVT-1999-BRA-crise-cambial-brasileira-e-adocao-do-cambio-flutuante-1999",
+    "event_file": "outputs/database/events/repairs/p0_repair_001.jsonl",
+    "manifest_file": "outputs/indexes/repairs/p0_repair_001_manifest.json",
+    "insert_after_event_id": "EVT-1998-GLOBAL-default-russo-e-colapso-do-ltcm-1998",
+    "insert_before_event_id": "EVT-2004-GLOBAL-terremoto-e-tsunami-do-oceano-indico-2004",
+    "catalog_position_one_based": 14,
+    "new_source_record_count": 0,
+    "reused_source_ids": [
+      "SRC-BCB-1999-01-COMUNICADO-6565"
+    ]
+  },
+  "canonical_reconstruction": {
+    "materialization_rule": "Ler os event_ids dos lotes P0-001 a P0-064 na ordem dos manifestos e inserir o overlay P0-REPAIR-001 entre as duas âncoras declaradas. O overlay não recebe número de lote.",
+    "event_count": 193,
+    "claim_count": 209,
+    "numbered_batch_source_record_count": 201,
+    "event_ids_sha256": "36a86c3b4ed06eb315de2d98241951a37fd1621416e67a12b651bfdf2c7eb416",
+    "event_ids_hash_method": "SHA-256 da concatenação dos 193 event_ids em ordem canônica, cada um seguido por uma quebra de linha UTF-8.",
+    "first_event_id": "EVT-1929-GLOBAL-crash-de-1929-e-grande-depressao",
+    "last_event_id": "EVT-2010-GLOBAL-explosao-da-plataforma-deepwater-horizon-e-derramamento-no-golfo-2010"
+  },
+  "input_files": {
+    "numbered_event_file_range": "outputs/database/events/batches/p0_batch_001.jsonl a outputs/database/events/batches/p0_batch_064.jsonl",
+    "numbered_source_file_range": "outputs/database/sources/batches/sources_p0_batch_001.jsonl a outputs/database/sources/batches/sources_p0_batch_064.jsonl",
+    "numbered_manifest_file_range": "outputs/indexes/batches/p0_batch_001_manifest.json a outputs/indexes/batches/p0_batch_064_manifest.json",
+    "base_event_partition_for_repair": "outputs/database/events/events_1900_1999.jsonl",
+    "base_source_registry": "outputs/database/sources/sources.jsonl",
+    "repair_event_file": "outputs/database/events/repairs/p0_repair_001.jsonl",
+    "repair_manifest_file": "outputs/indexes/repairs/p0_repair_001_manifest.json"
+  },
+  "frozen_hashes": {
+    "numbered_event_files_root_sha256": "35ad91b69211cfeaffa2857f460b9b20dd346f25b0ae01a04aad207a78f1adf2",
+    "numbered_source_files_root_sha256": "431b4d4430ae147f915a2b96055691985ffb00ca46209e443507be1eb434bbe5",
+    "numbered_manifest_files_root_sha256": "6c244b6f945fbe270e5ac44ed2a1526a01847b7673a45f45e2eb277d115d9ba2",
+    "repair_event_file_sha256": "ddb4ea189a825435598a4cb8fff275f6095c4a738559cf265f01c4c834234caa",
+    "repair_manifest_file_sha256": "d1973c4b4a805dd918907acdf746e1b6a143c0a2907bcce275c76c985b2dba4c",
+    "base_event_partition_sha256": "a37452b7d0f0bcbbb1c82285ab9a499da9bd5b13f6caf278a03b12a5c7f5e6d4",
+    "base_source_registry_sha256": "751d271acd359353ef4128a13253aa3e578cb4585dd1e703088fe699135c25a1",
+    "reconstruction_input_file_count": 196,
+    "reconstruction_inputs_root_sha256": "11645f851e17ebff84e88c82a8446c9df0b5ed1653c352d3fb2afaa32323dee6",
+    "hash_root_method": "SHA-256 das linhas UTF-8 ordenadas no formato caminho relativo, tabulação, sha256 do arquivo e quebra de linha."
+  },
+  "preexisting_outputs_snapshot": {
+    "file_count": 217,
+    "root_sha256": "0eeb9625c7f18105a934ecbd73e850ab7b86b14cf882dc144c6f9dd5b9e98e26"
+  },
+  "validation": {
+    "json_jsonl_syntax_valid": true,
+    "numbered_batch_sequence_complete": true,
+    "numbered_manifests_chain_valid": true,
+    "numbered_batches_unchanged": true,
+    "repair_overlay_applied_only_in_reconstruction": true,
+    "canonical_catalog_order_exact": true,
+    "canonical_event_count_193": true,
+    "event_ids_unique_and_deterministic": true,
+    "claim_ids_unique_and_deterministic": true,
+    "source_claim_references_valid": true,
+    "cutoff_consistent": true,
+    "recorded_historical_hashes_match": true,
+    "p0_065_absent": true,
+    "p0_inventory_exhausted": true,
+    "ready_for_downstream_use": true
+  },
+  "next_pending_p0_after_repair": null,
+  "notes": "Este manifesto congela a visão canônica P0 com o reparo externo aplicado. Não substitui, renomeia, renumera ou modifica os lotes P0-001 a P0-064."
+}
