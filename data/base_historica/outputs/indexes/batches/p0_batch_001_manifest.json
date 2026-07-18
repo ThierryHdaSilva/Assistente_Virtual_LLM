@@ -1,0 +1,25 @@
+{
+  "batch_id": "P0-001",
+  "operation": "overlay_upsert",
+  "base_manifest": "outputs/indexes/dataset_manifest.json",
+  "base_manifest_unchanged": true,
+  "cutoff_at": "2026-07-13T23:59:59-03:00",
+  "event_ids": [
+    "EVT-1929-GLOBAL-crash-de-1929-e-grande-depressao",
+    "EVT-1939-GLOBAL-segunda-guerra-mundial-1939-1945",
+    "EVT-1944-GLOBAL-bretton-woods-criacao-do-fmi-e-do-banco-mundial-1944-1945"
+  ],
+  "event_count": 3,
+  "claim_count": 5,
+  "source_count": 5,
+  "entity_count": 2,
+  "validation": {
+    "jsonl_syntax_valid": true,
+    "event_ids_match_existing_catalog": true,
+    "all_targets_were_pending_p0": true,
+    "source_claim_references_valid": true,
+    "prior_outputs_modified": false
+  },
+  "next_pending_p0_after_batch": "EVT-1971-GLOBAL-nixon-shock-e-fim-da-conversibilidade-do-dolar-em-ouro-1971",
+  "notes": "Aplicar este lote após as partições-base. Os registros têm os mesmos event_ids e substituem somente esses três objetos na visão materializada."
+}
